@@ -8,19 +8,15 @@
 import Foundation
 import UIKit
 
-enum ImageLoaderError: Error {
-    case badData
-}
-
 protocol ImageLoaderProtocol {
-    func loadImage(from url: URL) async throws -> UIImage
+    func loadImage(from url: URL) async throws -> UIImage?
 }
 
 actor ImageLoader: ImageLoaderProtocol {
     private let networkService: NetworkServiceProtocol
     private let cache: CacheStorageProtocol
     private let downsampler: ImageDownsamplerProtocol
-    private var tasks: [String: Task<UIImage, Error>] = [:]
+    private var tasks: [URL: Task<UIImage, Error>] = [:]
     
     init(
         networkService: NetworkServiceProtocol,
@@ -32,15 +28,13 @@ actor ImageLoader: ImageLoaderProtocol {
         self.downsampler = downsampler
     }
     
-    func loadImage(from url: URL) async throws -> UIImage {
-        let urlString = url.absoluteString
-        if let cachedData = try await cache.data(for: urlString) {
-            return await Task.detached(priority: .userInitiated) {
-                UIImage(data: cachedData)?.preparingForDisplay() ?? UIImage()
-            }.value
+    func loadImage(from url: URL) async throws -> UIImage? {
+        let key = keyForCache(url)
+        if let cachedData = try await cache.data(for: key) {
+            return await UIImage(data: cachedData)?.byPreparingForDisplay()
         }
         
-        if let existingTask = tasks[urlString] {
+        if let existingTask = tasks[url] {
             return try await existingTask.value
         }
         
@@ -49,14 +43,18 @@ actor ImageLoader: ImageLoaderProtocol {
             let imageData = try await networkService.performRequest(url: url)
             let image = try await self.downsampler.downsample(imageData)
             if let data = image.jpegData(compressionQuality: 0.8) {
-                try await self.cache.set(data, for: urlString)
+                try await self.cache.set(data, for: key)
             }
             return image
         }
         
-        tasks[urlString] = task
-        defer { tasks[urlString] = nil }
+        tasks[url] = task
+        defer { tasks[url] = nil }
         
         return try await task.value
+    }
+    
+    private func keyForCache(_ url: URL) -> String {
+        url.pathComponents.suffix(2).joined(separator: "_")
     }
 }

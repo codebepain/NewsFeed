@@ -20,9 +20,7 @@ final class CategoryLabel: UILabel {
 }
 
 final class NewsCell: UICollectionViewCell {
-    
-    private var imageLoadingTask: Task<Void, Never>?
-    
+
     private let containerStackView: UIStackView = {
         let stackView = UIStackView()
         stackView.translatesAutoresizingMaskIntoConstraints = false
@@ -75,9 +73,7 @@ final class NewsCell: UICollectionViewCell {
         label.textAlignment = .center
         return label
     }()
-    
-    private var aspectConstraint: NSLayoutConstraint?
-    
+        
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
@@ -130,21 +126,15 @@ final class NewsCell: UICollectionViewCell {
         descriptionLabel.text = item.description
         dateLabel.text = item.publishedDate
         categoryLabel.text = item.category
-        imageLoadingTask = Task { [weak self] in
-            guard let self, let url = item.imageURL else { return }
-            do {
-                let image = try await imageLoader.loadImage(from: url)
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    self.newsImageView.image = image
-                }
-            } catch {}
+        
+        if let url = item.imageURL {
+            newsImageView.img.setImage(from: url, using: imageLoader)
         }
     }
     
     override func prepareForReuse() {
         super.prepareForReuse()
-        imageLoadingTask?.cancel()
+        newsImageView.img.cancel()
         newsImageView.image = nil
         titleLabel.text = nil
         dateLabel.text = nil

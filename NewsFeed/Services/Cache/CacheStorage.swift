@@ -35,37 +35,34 @@ final class HybridCacheStorage: CacheStorageProtocol {
     }
     
     func set(_ data: Data, for key: String) async throws {
-        let fileKey = fileName(for: key) ?? key
-        cache.setObject(data as NSData, forKey: fileKey as NSString)
+        cache.setObject(data as NSData, forKey: key as NSString)
         
         try await Task.detached(priority: .background) { [weak self] in
             guard let self else { return }
-            let fileURL = self.cacheDirectory.appendingPathComponent(fileKey)
+            let fileURL = self.cacheDirectory.appendingPathComponent(key)
             try data.write(to: fileURL, options: .atomic)
         }.value
     }
     
     func data(for key: String) async throws -> Data? {
-        let fileKey = fileName(for: key) ?? key
         if let data = cache.object(forKey: key as NSString) as Data? {
             return data
         }
         
-        let fileURL = cacheDirectory.appendingPathComponent(fileKey)
+        let fileURL = cacheDirectory.appendingPathComponent(key)
         return try await Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return nil }
             guard self.fileManager.fileExists(atPath: fileURL.path) else { return nil }
             let data = try Data(contentsOf: fileURL)
-            self.cache.setObject(data as NSData, forKey: fileKey as NSString)
+            self.cache.setObject(data as NSData, forKey: key as NSString)
             return data
         }.value
     }
     
     func remove(for key: String) async throws {
-        let fileKey = fileName(for: key) ?? key
-        cache.removeObject(forKey: fileKey as NSString)
+        cache.removeObject(forKey: key as NSString)
         
-        let fileURL = cacheDirectory.appendingPathComponent(fileKey)
+        let fileURL = cacheDirectory.appendingPathComponent(key)
         try await Task.detached(priority: .utility) { [weak self] in
             guard let self else { return }
             if self.fileManager.fileExists(atPath: fileURL.path) {
@@ -82,18 +79,5 @@ final class HybridCacheStorage: CacheStorageProtocol {
             try fileManager.removeItem(at: cacheDirectory)
             try fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
         }.value
-    }
-}
-
-private extension HybridCacheStorage {
-    
-    func fileName(for urlString: String) -> String? {
-        guard let url = URL(string: urlString) else {
-            return nil
-        }
-        return url
-            .pathComponents
-            .suffix(2)
-            .joined(separator: "_")
     }
 }

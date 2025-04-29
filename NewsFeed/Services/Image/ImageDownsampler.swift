@@ -7,6 +7,10 @@
 
 import UIKit
 
+enum ImageDownsamplingError: Error {
+    case invalidData
+}
+
 protocol ImageDownsamplerProtocol {
     func downsample(_ imageData: Data) async throws -> UIImage
 }
@@ -22,13 +26,13 @@ final class ImageDownsampler: ImageDownsamplerProtocol {
     }
     
     func downsample(_ imageData: Data) async throws -> UIImage {
-        try await Task.detached(priority: .userInitiated) {
+        let maxDimensionInPixels = await MainActor.run { Constants.maxDimensionInPixels }
+    
+        return try await Task.detached(priority: .userInitiated) {
             let imageSourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
             guard let imageSource = CGImageSourceCreateWithData(imageData as CFData, imageSourceOptions) else {
-                throw ImageLoaderError.badData
+                throw ImageDownsamplingError.invalidData
             }
-            
-            let maxDimensionInPixels = Constants.maxDimensionInPixels
             
             let options = [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -38,7 +42,7 @@ final class ImageDownsampler: ImageDownsamplerProtocol {
             ] as CFDictionary
             
             guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options) else {
-                throw ImageLoaderError.badData
+                throw ImageDownsamplingError.invalidData
             }
             
             let image = UIImage(cgImage: thumbnail)
