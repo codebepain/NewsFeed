@@ -29,7 +29,9 @@ struct NewsDomainMapper: NewsDomainMapperProtocol {
     
     func map(item: NewsItem) throws -> News {
         guard
-            let publishedDate = DateFormatter.utc.date(from: item.publishedDate),
+            // Сервер иногда отдает в разных форматах
+            let publishedDate = DateFormatter.utc.date(from: item.publishedDate) ??
+                DateFormatter.fractional.date(from: item.publishedDate),
             let fullURL = URL(string: item.fullUrl)
         else {
             throw MappingError.invalidData
