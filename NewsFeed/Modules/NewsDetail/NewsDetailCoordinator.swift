@@ -36,6 +36,8 @@ final class NewsDetailCoordinator: NewsDetailCoordinatorProtocol {
         let vc = NewsDetailViewController(viewModel: viewModel)
         bindNavigation(for: viewModel)
 
+        navigationController.interactivePopGestureRecognizer?.isEnabled = true
+        navigationController.interactivePopGestureRecognizer?.delegate = vc
         navigationController.pushViewController(vc, animated: true)
     }
     

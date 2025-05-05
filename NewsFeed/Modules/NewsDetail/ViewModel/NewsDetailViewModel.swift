@@ -9,7 +9,8 @@ import Foundation
 import Combine
 
 protocol NewsDetailViewModelProtocol: AnyObject, NavigatingViewModel where Step == NewsDetailViewModel.NavigationStep {
-    var newsPublisher: AnyPublisher<News, Never> { get }
+    var requestPublisher: AnyPublisher<URLRequest, Never> { get }
+    
     func didFinishReading()
 }
 
@@ -19,8 +20,8 @@ final class NewsDetailViewModel: NewsDetailViewModelProtocol {
         case close
     }
     // MARK: - Private properties
-    
-    @Published private var news: News
+
+    @Published private var request: URLRequest
     
     private let navigationSubject = PassthroughSubject<NavigationStep, Never>()
     
@@ -30,14 +31,14 @@ final class NewsDetailViewModel: NewsDetailViewModelProtocol {
         navigationSubject.eraseToAnyPublisher()
     }
     
-    var newsPublisher: AnyPublisher<News, Never> {
-        $news.eraseToAnyPublisher()
+    var requestPublisher: AnyPublisher<URLRequest, Never> {
+        $request.eraseToAnyPublisher()
     }
     
     // MARK: - Init
     
     init(news: News) {
-        self.news = news
+        request = URLRequest(url: news.fullURL)
     }
     
     // MARK: - Public methods

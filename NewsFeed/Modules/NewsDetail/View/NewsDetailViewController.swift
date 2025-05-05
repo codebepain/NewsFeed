@@ -5,11 +5,12 @@
 //  Created by Vladimir Orlov on 18.04.2025.
 //
 
-import UIKit
-import SafariServices
 import Combine
+import UIKit
+import WebKit
 
 final class NewsDetailViewController: UIViewController {
+    private let webView = WKWebView()
     private let viewModel: any NewsDetailViewModelProtocol
     private var cancellables = Set<AnyCancellable>()
     
@@ -22,26 +23,44 @@ final class NewsDetailViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    override func loadView() {
+        view = webView
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        webView.allowsBackForwardNavigationGestures = true
+        navigationItem.leftBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .done,
+            target: self,
+            action: #selector(didTapDone)
+        )
+        
         bindViewModel()
     }
     
     private func bindViewModel() {
-        viewModel.newsPublisher
+        viewModel.requestPublisher
             .receive(on: RunLoop.main)
-            .sink { [weak self] news in
-                let safariVC = SFSafariViewController(url: news.fullURL)
-                safariVC.delegate = self
-                self?.present(safariVC, animated: true)
+            .sink { [weak self] request in
+                self?.webView.load(request)
             }
             .store(in: &cancellables)
     }
+    
+    @objc private func didTapDone() {
+        viewModel.didFinishReading()
+    }
 }
 
-extension NewsDetailViewController: SFSafariViewControllerDelegate {
+// MARK: - UIGestureRecognizerDelegate
+
+extension NewsDetailViewController: UIGestureRecognizerDelegate {
     
-    func safariViewControllerDidFinish(_ controller: SFSafariViewController) {
-        viewModel.didFinishReading()
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if !webView.canGoBack {
+            viewModel.didFinishReading()
+        }
+        return true
     }
 }
