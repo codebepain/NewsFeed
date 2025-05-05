@@ -1,0 +1,17 @@
+build/
+DerivedData/
+
+*.xcuserstate
+xcuserdata/
+
+*.xcworkspace
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.log
+
+*.tmp
+*.swp
+*~
+
+*.xcarchive
