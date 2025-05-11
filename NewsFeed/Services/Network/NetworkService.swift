@@ -74,7 +74,7 @@ final class NetworkService: NetworkServiceProtocol {
         decoder: JSONDecoder = JSONDecoder()
     ) {
         let config = URLSessionConfiguration.default
-        config.requestCachePolicy = .returnCacheDataElseLoad
+        config.requestCachePolicy = .reloadRevalidatingCacheData
         config.urlCache = URLCache(
             memoryCapacity: 10 * 1024 * 1024,
             diskCapacity: 50 * 1024 * 1024
@@ -100,7 +100,6 @@ final class NetworkService: NetworkServiceProtocol {
         
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
-        request.cachePolicy = .returnCacheDataElseLoad
         
         let (data, response) = try await session.data(for: request)
         
